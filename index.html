@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ff4f9a">
+  <title>Pipolätkä</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; overflow: hidden; color: #4c1230; background: radial-gradient(ellipse at 50% 42%, #fff8fc 0, #ffe6f1 39%, #ffb5d3 100%); }
+    main { width: min(100% - 32px, 760px); padding: clamp(32px, 8vw, 72px) clamp(20px, 6vw, 56px); text-align: center; border: 1px solid rgba(255,255,255,.85); border-radius: 32px; background: rgba(255,255,255,.56); box-shadow: 0 24px 80px rgba(178,35,98,.14), inset 0 1px rgba(255,255,255,.9); backdrop-filter: blur(12px); }
+    h1 { margin: 0; font-size: clamp(2.4rem, 9vw, 5.2rem); line-height: .98; letter-spacing: -.075em; font-weight: 850; }
+    .date { margin: 18px 0 36px; color: #a33668; font-size: clamp(.95rem, 3vw, 1.15rem); letter-spacing: .08em; }
+    .timer { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(8px, 3vw, 20px); }
+    .unit { min-width: 0; padding: clamp(14px, 4vw, 25px) 8px; border-radius: 20px; background: #fff; box-shadow: 0 8px 26px rgba(178,35,98,.09); }
+    .number { display: block; font-variant-numeric: tabular-nums; font-size: clamp(2rem, 9vw, 4.5rem); line-height: 1; font-weight: 800; letter-spacing: -.06em; color: #e72b7d; }
+    .label { display: block; margin-top: 10px; color: #a33668; font-size: clamp(.72rem, 2.5vw, .9rem); letter-spacing: .12em; text-transform: uppercase; }
+    @media (max-width: 420px) { main { border-radius: 24px; } .unit { border-radius: 15px; } }
+  </style>
+</head>
+<body>
+  <main aria-label="Lähtölaskenta pipolätkään">
+    <h1>Pipolätkä</h1>
+    <p class="date">14.1. klo 00.00</p>
+    <section class="timer" aria-live="off" aria-label="Aikaa tapahtumaan">
+      <div class="unit"><span class="number" id="days">000</span><span class="label">Päivää</span></div>
+      <div class="unit"><span class="number" id="hours">00</span><span class="label">Tuntia</span></div>
+      <div class="unit"><span class="number" id="seconds">00</span><span class="label">Sekuntia</span></div>
+    </section>
+  </main>
+  <script>
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Helsinki", year: "numeric", month: "2-digit", day: "2-digit",
+      hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23"
+    });
+    function helsinkiParts(date) {
+      return Object.fromEntries(formatter.formatToParts(date).filter(p => p.type !== "literal").map(p => [p.type, Number(p.value)]));
+    }
+    function targetInstant(year) {
+      // Resolve midnight in Helsinki, including its UTC offset, using the browser's IANA time-zone data.
+      const guess = new Date(Date.UTC(year, 0, 14));
+      const p = helsinkiParts(guess);
+      const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+      return new Date(guess.getTime() + (guess.getTime() - asUtc));
+    }
+    function nextTarget(now) {
+      const localYear = helsinkiParts(now).year;
+      let target = targetInstant(localYear);
+      if (target <= now) target = targetInstant(localYear + 1);
+      return target;
+    }
+    function update() {
+      const now = new Date();
+      let remaining = Math.max(0, Math.floor((nextTarget(now) - now) / 1000));
+      const days = Math.floor(remaining / 86400); remaining %= 86400;
+      const hours = Math.floor(remaining / 3600); remaining %= 3600;
+      document.getElementById("days").textContent = String(days).padStart(3, "0");
+      document.getElementById("hours").textContent = String(hours).padStart(2, "0");
+      document.getElementById("seconds").textContent = String(remaining % 60).padStart(2, "0");
+    }
+    update();
+    setInterval(update, 1000);
+  </script>
+</body>
+</html>
